@@ -1,0 +1,45 @@
+#include "bus.hpp"
+#include "cpu.hpp"
+#include <fstream>
+#include <iostream>
+
+static Bus bus;
+static CPU cpu(bus);
+
+std::vector<uint8_t> ReadROMFile(const std::string &path) {
+  std::ifstream file(path, std::ios::binary | std::ios::ate);
+
+  if (!file.is_open()) {
+    throw std::runtime_error("Failed to open ROM: " + path);
+  }
+
+  std::streamsize size = file.tellg();
+  file.seekg(0, std::ios::beg);
+
+  std::vector<uint8_t> buffer(size);
+  if (file.read(reinterpret_cast<char *>(buffer.data()), size)) {
+    return buffer;
+  }
+
+  return {};
+}
+
+void InitializeSystem(std::string path) {
+  try {
+    std::vector<uint8_t> rom = ReadROMFile(path);
+    bus.LoadROM(rom);
+  } catch (const std::exception &e) {
+    std::cerr << "Initialization error: " << e.what() << std::endl;
+  }
+}
+
+int main(int argc, char *argv[]) {
+  if (argc == 1)
+    return -1;
+
+  InitializeSystem(argv[1]);
+
+  while (true) {
+    cpu.Step();
+  }
+}

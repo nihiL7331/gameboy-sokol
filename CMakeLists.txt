@@ -8,9 +8,9 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_executable(emugameboy
-  # src/main_emu.cpp
+  src/main_emu.cpp
   # src/disassembler.cpp
-  # src/cpu.cpp
+  src/cpu.cpp
   # src/sokol.cpp
 )
 

@@ -21,6 +21,8 @@ private:
 public:
   Bus() = default;
 
+  void LoadROM(std::vector<uint8_t> rom_data) { ROM = std::move(rom_data); }
+
   uint8_t Read(uint16_t addr) const {
     switch (addr >> 12) {
     case 0x0:
