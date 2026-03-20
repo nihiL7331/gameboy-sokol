@@ -24,9 +24,11 @@ std::vector<uint8_t> ReadROMFile(const std::string &path) {
   return {};
 }
 
-void InitializeSystem(std::string path) {
+void InitializeSystem(std::string boot_path, std::string rom_path) {
   try {
-    std::vector<uint8_t> rom = ReadROMFile(path);
+    std::vector<uint8_t> boot = ReadROMFile(boot_path);
+    bus.LoadBoot(boot);
+    std::vector<uint8_t> rom = ReadROMFile(rom_path);
     bus.LoadROM(rom);
   } catch (const std::exception &e) {
     std::cerr << "Initialization error: " << e.what() << std::endl;
@@ -34,10 +36,12 @@ void InitializeSystem(std::string path) {
 }
 
 int main(int argc, char *argv[]) {
-  if (argc == 1)
-    return -1;
+  // if (argc == 1)
+  //   return -1;
+  //
+  // InitializeSystem(argv[1]);
 
-  InitializeSystem(argv[1]);
+  InitializeSystem("../roms/dmg_boot.bin");
 
   while (true) {
     cpu.Step();

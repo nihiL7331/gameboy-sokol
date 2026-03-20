@@ -3,6 +3,7 @@
 
 #include <array>
 #include <cstdint>
+#include <cstring>
 #include <vector>
 
 class Bus {
@@ -18,12 +19,20 @@ private:
   std::array<uint8_t, 0x007F> HRAM; // 0xFF80 - 0xFFFE
   uint8_t IE;                       // 0xFFFF - 0xFFFF
 
+  std::array<uint8_t, 0x100> BOOT; // technically not separate
+
 public:
   Bus() = default;
 
+  void LoadBoot(const std::vector<uint8_t> &boot_data) {
+    std::copy(boot_data.begin(), boot_data.begin() + 0x100, BOOT.begin());
+  }
   void LoadROM(std::vector<uint8_t> rom_data) { ROM = std::move(rom_data); }
 
   uint8_t Read(uint16_t addr) const {
+    // HACK:
+    if (addr == 0xFF44)
+      return 0x90;
     switch (addr >> 12) {
     case 0x0:
     case 0x1:

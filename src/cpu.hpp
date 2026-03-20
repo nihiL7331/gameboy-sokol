@@ -24,13 +24,15 @@ private:
 
   Bus &bus;
 
+  uint8_t ExecuteCB();
+
 public:
   CPU(class Bus &b)
       : A(0x00), B(0x00), C(0x00), D(0x00), E(0x00), H(0x00), L(0x00),
-        PC(0x0000), SP(0x0000), F(0x00), bus(b) {};
+        PC(0x0000), SP(0xFFFE), F(0x00), bus(b) {};
   ~CPU() = default;
 
-  void Step();
+  uint8_t Step();
 
   void SetFlag(const uint8_t mask, bool cond) {
     uint8_t bs = -static_cast<uint8_t>(cond);
@@ -46,20 +48,20 @@ public:
   uint16_t GetPC() const { return PC; }
 
   void SetAF(uint16_t val) {
-    A = val >> 8;
+    A = (val >> 8) & 0xFF;
     F = val & 0xF0;
   }
   void SetBC(uint16_t val) {
-    B = val >> 8;
-    C = val;
+    B = (val >> 8) & 0xFF;
+    C = val & 0xFF;
   }
   void SetDE(uint16_t val) {
-    D = val >> 8;
-    E = val;
+    D = (val >> 8) & 0xFF;
+    E = val & 0xFF;
   }
   void SetHL(uint16_t val) {
-    H = val >> 8;
-    L = val;
+    H = (val >> 8) & 0xFF;
+    L = val & 0xFF;
   }
   void SetSP(uint16_t val) { SP = val; }
   void SetPC(uint16_t val) { PC = val; }
