@@ -367,12 +367,58 @@ uint8_t CPU::Step() {
     A = bus.Read(PC++);
     return 8;
   }
+  case 0x40: { // LD B, B
+    return 4;
+  }
+  case 0x41: { // LD B, C
+    B = C;
+    return 4;
+  }
+  case 0x42: { // LD B, D
+    B = D;
+    return 4;
+  }
+  case 0x43: { // LD B, E
+    B = E;
+    return 4;
+  }
+  case 0x44: { // LD B, H
+    B = H;
+    return 4;
+  }
+  case 0x45: { // LD B, L
+    B = L;
+    return 4;
+  }
   case 0x46: { // LD B, [HL]
     B = bus.Read(GetHL());
     return 8;
   }
   case 0x47: { // LD B, A
     B = A;
+    return 4;
+  }
+  case 0x48: { // LD C, B
+    C = B;
+    return 4;
+  }
+  case 0x49: { // LD C, C
+    return 4;
+  }
+  case 0x4A: { // LD C, D
+    C = D;
+    return 4;
+  }
+  case 0x4B: { // LD C, E
+    C = E;
+    return 4;
+  }
+  case 0x4C: { // LD C, H
+    C = H;
+    return 4;
+  }
+  case 0x4D: { // LD C, L
+    C = L;
     return 4;
   }
   case 0x4E: { // LD C, [HL]
@@ -383,12 +429,54 @@ uint8_t CPU::Step() {
     C = A;
     return 4;
   }
+  case 0x50: { // LD D, B
+    D = B;
+    return 4;
+  }
+  case 0x51: { // LD D, C
+    D = C;
+    return 4;
+  }
+  case 0x52: { // LD D, D
+    return 4;
+  }
+  case 0x53: { // LD D, E
+    D = E;
+    return 4;
+  }
+  case 0x54: { // LD D, H
+    D = H;
+    return 4;
+  }
+  case 0x55: { // LD D, L
+    D = L;
+    return 4;
+  }
   case 0x56: { // LD D, [HL]
     D = bus.Read(GetHL());
     return 8;
   }
   case 0x57: { // LD D, A
     D = A;
+    return 4;
+  }
+  case 0x58: { // LD E, B
+    E = B;
+    return 4;
+  }
+  case 0x59: { // LD E, C
+    E = C;
+    return 4;
+  }
+  case 0x5A: { // LD E, D
+    E = D;
+    return 4;
+  }
+  case 0x5B: { // LD E, E
+    return 4;
+  }
+  case 0x5C: { // LD E, H
+    E = H;
     return 4;
   }
   case 0x5D: { // LD E, L
@@ -403,8 +491,27 @@ uint8_t CPU::Step() {
     E = A;
     return 4;
   }
+  case 0x60: { // LD H, B
+    H = B;
+    return 4;
+  }
+  case 0x61: { // LD H, C
+    H = C;
+    return 4;
+  }
   case 0x62: { // LD H, D
     H = D;
+    return 4;
+  }
+  case 0x63: { // LD H, E
+    H = E;
+    return 4;
+  }
+  case 0x64: { // LD H, H
+    return 4;
+  }
+  case 0x65: { // LD H, L
+    H = L;
     return 4;
   }
   case 0x66: { // LD H, [HL]
@@ -415,8 +522,27 @@ uint8_t CPU::Step() {
     H = A;
     return 4;
   }
+  case 0x68: { // LD L, B
+    L = B;
+    return 4;
+  }
+  case 0x69: { // LD L, C
+    L = C;
+    return 4;
+  }
+  case 0x6A: { // LD L, D
+    L = D;
+    return 4;
+  }
   case 0x6B: { // LD L, E
     L = E;
+    return 4;
+  }
+  case 0x6C: { // LD L, H
+    L = H;
+    return 4;
+  }
+  case 0x6D: { // LD L, L
     return 4;
   }
   case 0x6E: { // LD L, [HL]
@@ -441,6 +567,14 @@ uint8_t CPU::Step() {
   }
   case 0x73: { // LD [HL], E
     bus.Write(GetHL(), E);
+    return 8;
+  }
+  case 0x74: { // LD [HL], H
+    bus.Write(GetHL(), H);
+    return 8;
+  }
+  case 0x75: { // LD [HL], L
+    bus.Write(GetHL(), L);
     return 8;
   }
   case 0x77: { // LD [HL], A
@@ -474,6 +608,9 @@ uint8_t CPU::Step() {
   case 0x7E: { // LD A, [HL]
     A = bus.Read(GetHL());
     return 8;
+  }
+  case 0x7F: { // LD A, A
+    return 4;
   }
   case 0x80: { // ADD A, B
     uint16_t res = A + B;
