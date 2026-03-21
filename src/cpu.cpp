@@ -744,6 +744,15 @@ uint8_t CPU::Step() {
     SetFlag(FLAG_CY, byte > A);
     return 8;
   }
+  case 0xC0: { // RET NZ
+    if (!GetFlag(FLAG_Z)) {
+      uint8_t lo = bus.Read(SP++);
+      uint8_t hi = bus.Read(SP++);
+      PC = (hi << 8) | lo;
+      return 20;
+    }
+    return 8;
+  }
   case 0xC1: { // POP BC
     C = bus.Read(SP++);
     B = bus.Read(SP++);
@@ -790,6 +799,12 @@ uint8_t CPU::Step() {
     A = res;
     return 8;
   }
+  case 0xC7: { // RST $00
+    bus.Write(--SP, PC >> 8);
+    bus.Write(--SP, PC & 0x00FF);
+    PC = 0x0000;
+    return 16;
+  }
   case 0xC8: { // RET Z
     if (GetFlag(FLAG_Z)) {
       uint8_t lo = bus.Read(SP++);
@@ -805,8 +820,28 @@ uint8_t CPU::Step() {
     PC = (hi << 8) | lo;
     return 16;
   }
+  case 0xCA: { // JP Z, a16
+    uint8_t lo = bus.Read(PC++);
+    uint8_t hi = bus.Read(PC++);
+    if (GetFlag(FLAG_Z)) {
+      PC = (hi << 8) | lo;
+      return 16;
+    }
+    return 12;
+  }
   case 0xCB: { // PREFIX
     return ExecuteCB();
+  }
+  case 0xCC: { // CALL Z, a16
+    uint8_t lo = bus.Read(PC++);
+    uint8_t hi = bus.Read(PC++);
+    if (GetFlag(FLAG_Z)) {
+      bus.Write(--SP, PC >> 8);
+      bus.Write(--SP, PC & 0x00FF);
+      PC = (hi << 8) | lo;
+      return 24;
+    }
+    return 12;
   }
   case 0xCD: { // CALL a16
     uint8_t lo = bus.Read(PC++);
@@ -827,6 +862,12 @@ uint8_t CPU::Step() {
     A = res;
     return 8;
   }
+  case 0xCF: { // RST $08
+    bus.Write(--SP, PC >> 8);
+    bus.Write(--SP, PC & 0x00FF);
+    PC = 0x0008;
+    return 16;
+  }
   case 0xD0: { // RET NC
     if (!GetFlag(FLAG_CY)) {
       uint8_t lo = bus.Read(SP++);
@@ -839,6 +880,26 @@ uint8_t CPU::Step() {
   case 0xD1: { // POP DE
     E = bus.Read(SP++);
     D = bus.Read(SP++);
+    return 12;
+  }
+  case 0xD2: { // JP NC, a16
+    uint8_t lo = bus.Read(PC++);
+    uint8_t hi = bus.Read(PC++);
+    if (!GetFlag(FLAG_CY)) {
+      PC = (hi << 8) | lo;
+      return 16;
+    }
+    return 12;
+  }
+  case 0xD4: { // CALL NC, a16
+    uint8_t lo = bus.Read(PC++);
+    uint8_t hi = bus.Read(PC++);
+    if (!GetFlag(FLAG_CY)) {
+      bus.Write(--SP, PC >> 8);
+      bus.Write(--SP, PC & 0x00FF);
+      PC = (hi << 8) | lo;
+      return 24;
+    }
     return 12;
   }
   case 0xD5: { // PUSH DE
@@ -856,6 +917,12 @@ uint8_t CPU::Step() {
     A = res;
     return 8;
   }
+  case 0xD7: { // RST $10
+    bus.Write(--SP, PC >> 8);
+    bus.Write(--SP, PC & 0x00FF);
+    PC = 0x0010;
+    return 16;
+  }
   case 0xD8: { // RET C
     if (GetFlag(FLAG_CY)) {
       uint8_t lo = bus.Read(SP++);
@@ -864,6 +931,33 @@ uint8_t CPU::Step() {
       return 20;
     }
     return 8;
+  }
+  case 0xD9: { // RETI
+    // TODO: EI
+    uint8_t lo = bus.Read(SP++);
+    uint8_t hi = bus.Read(SP++);
+    PC = (hi << 8) | lo;
+    return 16;
+  }
+  case 0xDA: { // JP C, a16
+    uint8_t lo = bus.Read(PC++);
+    uint8_t hi = bus.Read(PC++);
+    if (GetFlag(FLAG_CY)) {
+      PC = (hi << 8) | lo;
+      return 16;
+    }
+    return 12;
+  }
+  case 0xDC: { // CALL C, a16
+    uint8_t lo = bus.Read(PC++);
+    uint8_t hi = bus.Read(PC++);
+    if (GetFlag(FLAG_CY)) {
+      bus.Write(--SP, PC >> 8);
+      bus.Write(--SP, PC & 0x00FF);
+      PC = (hi << 8) | lo;
+      return 24;
+    }
+    return 12;
   }
   case 0xDE: { // SBC A, n8
     uint8_t CY = GetFlag(FLAG_CY);
@@ -875,6 +969,12 @@ uint8_t CPU::Step() {
     SetFlag(FLAG_CY, byte + CY > A);
     A = res & 0xFF;
     return 8;
+  }
+  case 0xDF: { // RST $18
+    bus.Write(--SP, PC >> 8);
+    bus.Write(--SP, PC & 0x00FF);
+    PC = 0x0018;
+    return 16;
   }
   case 0xE0: { // LDH [a8], A
     uint8_t lo = bus.Read(PC++);
@@ -902,6 +1002,12 @@ uint8_t CPU::Step() {
     SetFlag(FLAG_HCY, true);
     SetFlag(FLAG_CY, false);
     return 4;
+  }
+  case 0xE7: { // RST $20
+    bus.Write(--SP, PC >> 8);
+    bus.Write(--SP, PC & 0x00FF);
+    PC = 0x0020;
+    return 16;
   }
   case 0xE8: { // ADD SP, e8
     int8_t offset = static_cast<int8_t>(bus.Read(PC++));
@@ -932,6 +1038,12 @@ uint8_t CPU::Step() {
     SetFlag(FLAG_CY, false);
     return 8;
   }
+  case 0xEF: { // RST $28
+    bus.Write(--SP, PC >> 8);
+    bus.Write(--SP, PC & 0x00FF);
+    PC = 0x0028;
+    return 16;
+  }
   case 0xF0: { // LDH A, [a8]
     uint8_t lo = bus.Read(PC++);
     A = bus.Read(0xFF00 | lo);
@@ -957,6 +1069,12 @@ uint8_t CPU::Step() {
     SetFlag(FLAG_HCY, false);
     SetFlag(FLAG_CY, false);
     return 8;
+  }
+  case 0xF7: { // RST $30
+    bus.Write(--SP, PC >> 8);
+    bus.Write(--SP, PC & 0x00FF);
+    PC = 0x0030;
+    return 16;
   }
   case 0xF8: { // LD HL, SP + e8
     int8_t offset = static_cast<int8_t>(bus.Read(PC++));
@@ -987,6 +1105,12 @@ uint8_t CPU::Step() {
     SetFlag(FLAG_HCY, (A ^ byte ^ res) & 0x10);
     SetFlag(FLAG_CY, byte > A);
     return 8;
+  }
+  case 0xFF: { // RST $38
+    bus.Write(--SP, PC >> 8);
+    bus.Write(--SP, PC & 0x00FF);
+    PC = 0x0038;
+    return 16;
   }
   default:
     std::cout << std::format("Unimplemented opcode {:02x} at PC={:04x}\n",
