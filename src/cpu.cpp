@@ -1054,6 +1054,10 @@ uint8_t CPU::Step() {
     A = bus.Read(SP++);
     return 12;
   }
+  case 0xF2: { // LDH A, [C]
+    A = bus.Read(0xFF00 | C);
+    return 8;
+  }
   case 0xF3: { // DI
     return 4;  // TODO:
   }
