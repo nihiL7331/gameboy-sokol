@@ -52,6 +52,20 @@ uint8_t CPU::Step() {
     bus.Write(addr + 1, SP >> 8);
     return 20;
   }
+  case 0x09: { // ADD HL, BC
+    uint16_t HL = GetHL();
+    uint16_t BC = GetBC();
+    uint32_t res = HL + BC;
+    SetFlag(FLAG_N, false);
+    SetFlag(FLAG_HCY, (HL ^ BC ^ res) & 0x00001000);
+    SetFlag(FLAG_CY, res & 0x00010000);
+    SetHL(res & 0x0000FFFF);
+    return 8;
+  }
+  case 0x0B: { // DEC BC
+    SetBC(GetBC() - 1);
+    return 8;
+  }
   case 0x0C: { // INC C
     uint8_t res = C + 1;
     SetFlag(FLAG_Z, res == 0x00);
@@ -121,8 +135,22 @@ uint8_t CPU::Step() {
     PC += offset;
     return 12;
   }
+  case 0x19: { // ADD HL, DE
+    uint16_t HL = GetHL();
+    uint16_t DE = GetDE();
+    uint32_t res = HL + DE;
+    SetFlag(FLAG_N, false);
+    SetFlag(FLAG_HCY, (HL ^ DE ^ res) & 0x00001000);
+    SetFlag(FLAG_CY, res & 0x00010000);
+    SetHL(res & 0x0000FFFF);
+    return 8;
+  }
   case 0x1A: { // LD A, [DE]
     A = bus.Read(GetDE());
+    return 8;
+  }
+  case 0x1B: { // DEC DE
+    SetDE(GetDE() - 1);
     return 8;
   }
   case 0x1C: { // INC E
@@ -227,7 +255,7 @@ uint8_t CPU::Step() {
     uint16_t HL = GetHL();
     uint32_t res = HL << 1;
     SetFlag(FLAG_N, false);
-    SetFlag(FLAG_HCY, ((HL & 0x0FFF) + (HL & 0x0FFF)) > 0x0FFF);
+    SetFlag(FLAG_HCY, (HL ^ HL ^ res) & 0x00001000);
     SetFlag(FLAG_CY, res & 0x00010000);
     SetHL(res);
     return 8;
@@ -235,6 +263,10 @@ uint8_t CPU::Step() {
   case 0x2A: { // LD A, [HL+]
     A = bus.Read(GetHL());
     SetHL(GetHL() + 1);
+    return 8;
+  }
+  case 0x2B: { // DEC HL
+    SetHL(GetHL() - 1);
     return 8;
   }
   case 0x2C: { // INC L
