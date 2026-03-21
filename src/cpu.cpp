@@ -276,13 +276,18 @@ uint8_t CPU::Step() {
     SetHL(GetHL() - 1);
     return 8;
   }
+  case 0x33: { // INC SP
+    SP++;
+    return 8;
+  }
   case 0x35: { // DEC [HL]
     uint16_t HL = GetHL();
-    uint8_t res = bus.Read(HL) - 1;
+    uint8_t val = bus.Read(HL);
+    uint8_t res = val - 1;
     SetFlag(FLAG_Z, res == 0);
     SetFlag(FLAG_N, true);
-    SetFlag(FLAG_HCY, (HL ^ 1 ^ res) & 0x10);
-    SetHL(res);
+    SetFlag(FLAG_HCY, (val ^ 1 ^ res) & 0x10);
+    bus.Write(HL, res);
     return 12;
   }
   case 0x38: { // JR C, e8
@@ -291,6 +296,19 @@ uint8_t CPU::Step() {
       PC += offset;
       return 12;
     }
+    return 8;
+  }
+  case 0x39: { // ADD HL, SP
+    uint16_t HL = GetHL();
+    uint32_t res = HL + SP;
+    SetFlag(FLAG_N, false);
+    SetFlag(FLAG_HCY, ((HL & 0x0FFF) + (SP & 0x0FFF)) > 0x0FFF);
+    SetFlag(FLAG_CY, res & 0x00010000);
+    SetHL(res);
+    return 8;
+  }
+  case 0x3B: { // DEC SP
+    SP--;
     return 8;
   }
   case 0x3C: { // INC A
@@ -337,12 +355,32 @@ uint8_t CPU::Step() {
     D = A;
     return 4;
   }
+  case 0x5D: { // LD E, L
+    E = L;
+    return 4;
+  }
+  case 0x5E: { // LD E, [HL]
+    E = bus.Read(GetHL());
+    return 8;
+  }
   case 0x5F: { // LD E, A
     E = A;
     return 4;
   }
+  case 0x62: { // LD H, D
+    H = D;
+    return 4;
+  }
+  case 0x66: { // LD H, [HL]
+    H = bus.Read(GetHL());
+    return 8;
+  }
   case 0x67: { // LD H, A
     H = A;
+    return 4;
+  }
+  case 0x6B: { // LD L, E
+    L = E;
     return 4;
   }
   case 0x6E: { // LD L, [HL]
@@ -363,6 +401,10 @@ uint8_t CPU::Step() {
   }
   case 0x72: { // LD [HL], D
     bus.Write(GetHL(), D);
+    return 8;
+  }
+  case 0x73: { // LD [HL], E
+    bus.Write(GetHL(), E);
     return 8;
   }
   case 0x77: { // LD [HL], A
@@ -433,6 +475,14 @@ uint8_t CPU::Step() {
     SetFlag(FLAG_CY, false);
     return 4;
   }
+  case 0xAD: { // XOR A, L
+    A ^= L;
+    SetFlag(FLAG_Z, A == 0);
+    SetFlag(FLAG_N, false);
+    SetFlag(FLAG_HCY, false);
+    SetFlag(FLAG_CY, false);
+    return 4;
+  }
   case 0xAE: { // XOR A, [HL]
     A ^= bus.Read(GetHL());
     SetFlag(FLAG_Z, A == 0);
@@ -444,6 +494,14 @@ uint8_t CPU::Step() {
   case 0xAF: { // XOR A, A
     A = 0x00;
     SetFlag(FLAG_Z, true);
+    SetFlag(FLAG_N, false);
+    SetFlag(FLAG_HCY, false);
+    SetFlag(FLAG_CY, false);
+    return 4;
+  }
+  case 0xB0: { // OR A, B
+    A |= B;
+    SetFlag(FLAG_Z, A == 0);
     SetFlag(FLAG_N, false);
     SetFlag(FLAG_HCY, false);
     SetFlag(FLAG_CY, false);
@@ -661,6 +719,17 @@ uint8_t CPU::Step() {
     SetFlag(FLAG_CY, false);
     return 4;
   }
+  case 0xE8: { // ADD SP, e8
+    int8_t offset = static_cast<int8_t>(bus.Read(PC++));
+    uint8_t unsigned_offset = static_cast<uint8_t>(offset);
+    uint16_t res = SP + offset;
+    SetFlag(FLAG_Z, false);
+    SetFlag(FLAG_N, false);
+    SetFlag(FLAG_HCY, (SP ^ unsigned_offset ^ res) & 0x10);
+    SetFlag(FLAG_CY, ((SP & 0xFF) + unsigned_offset) > 0xFF);
+    SP = res;
+    return 16;
+  }
   case 0xE9: { // JP HL
     PC = GetHL();
     return 4;
@@ -696,6 +765,21 @@ uint8_t CPU::Step() {
     bus.Write(--SP, A);
     bus.Write(--SP, F & 0xF0);
     return 16;
+  }
+  case 0xF8: { // LD HL, SP + e8
+    int8_t offset = static_cast<int8_t>(bus.Read(PC++));
+    uint8_t unsigned_offset = static_cast<uint8_t>(offset);
+    uint16_t res = SP + offset;
+    SetFlag(FLAG_Z, false);
+    SetFlag(FLAG_N, false);
+    SetFlag(FLAG_HCY, (SP ^ unsigned_offset ^ res) & 0x10);
+    SetFlag(FLAG_CY, ((SP & 0xFF) + unsigned_offset) > 0xFF);
+    SetHL(res);
+    return 12;
+  }
+  case 0xF9: { // LD SP, HL
+    SP = GetHL();
+    return 8;
   }
   case 0xFA: { // LD A, [a16]
     uint8_t lo = bus.Read(PC++);
@@ -749,6 +833,23 @@ uint8_t CPU::ExecuteCB() {
     SetFlag(FLAG_N, false);
     SetFlag(FLAG_HCY, false);
     SetFlag(FLAG_CY, CY);
+    return 8;
+  }
+  case 0x1B: { // RR E
+    uint8_t CY = E & 0x01;
+    E = (E >> 1) | (GetFlag(FLAG_CY) << 7);
+    SetFlag(FLAG_Z, E == 0);
+    SetFlag(FLAG_N, false);
+    SetFlag(FLAG_HCY, false);
+    SetFlag(FLAG_CY, CY);
+    return 8;
+  }
+  case 0x37: { // SWAP A
+    A = (A >> 4) | (A << 4);
+    SetFlag(FLAG_Z, A == 0);
+    SetFlag(FLAG_N, false);
+    SetFlag(FLAG_HCY, false);
+    SetFlag(FLAG_CY, false);
     return 8;
   }
   case 0x38: { // SRL B
