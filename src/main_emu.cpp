@@ -41,7 +41,7 @@ int main(int argc, char *argv[]) {
   //
   // InitializeSystem(argv[1]);
 
-  InitializeSystem("../roms/dmg_boot.bin");
+  InitializeSystem("../roms/dmg_boot.bin", "../roms/cpu_instrs/03-op sp,hl.gb");
 
   while (true) {
     cpu.Step();

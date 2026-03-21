@@ -4,6 +4,7 @@
 #include <array>
 #include <cstdint>
 #include <cstring>
+#include <iostream>
 #include <vector>
 
 class Bus {
@@ -24,15 +25,26 @@ private:
 public:
   Bus() = default;
 
+  bool is_boot = true;
   void LoadBoot(const std::vector<uint8_t> &boot_data) {
     std::copy(boot_data.begin(), boot_data.begin() + 0x100, BOOT.begin());
   }
+
   void LoadROM(std::vector<uint8_t> rom_data) { ROM = std::move(rom_data); }
 
   uint8_t Read(uint16_t addr) const {
     // HACK:
-    if (addr == 0xFF44)
-      return 0x90;
+    if (addr == 0xFF44) {
+      static uint8_t fake_ly = 0;
+      fake_ly = (fake_ly + 1) % 154;
+      return fake_ly;
+    }
+    if (addr == 0xFF04) {
+      static uint8_t fake_div = 0;
+      return fake_div++;
+    }
+    if (is_boot && addr < 0x0100)
+      return BOOT[addr];
     switch (addr >> 12) {
     case 0x0:
     case 0x1:
@@ -82,6 +94,18 @@ public:
   }
 
   void Write(uint16_t addr, uint8_t data) {
+    // HACK: intercept serial port output for tests
+    if (addr == 0xFF02 && data == 0x81) {
+      std::cout << (char)Read(0xFF01);
+      std::cout.flush();
+      return;
+    }
+
+    if (addr == 0xFF02) {
+      IO[0x02] = 0;
+      return;
+    }
+
     switch (addr >> 12) {
     case 0x0:
     case 0x1:
@@ -115,6 +139,8 @@ public:
       } else if (addr >= 0xFE00 && addr <= 0xFE9F) { // OAM
         OAM[addr & 0x00FF] = data;
       } else if (addr >= 0xFF00 && addr <= 0xFF7F) { // IO
+        if (addr == 0xFF50 & data != 0)
+          is_boot = false;
         IO[addr & 0x00FF] = data;
       } else if (addr >= 0xFF80 && addr <= 0xFFFE) { // HRAM
         HRAM[addr & 0x007F] = data;
