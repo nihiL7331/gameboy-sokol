@@ -10,8 +10,10 @@ private:
   uint8_t TMA;     // Timer Modulo (0xFF06)
   uint8_t TAC;     // Timer Control (0xFF07)
 
+  bool TIMA_OF_delay;
+
 public:
-  Clock() : SYSCLK(0), TIMA(0), TMA(0), TAC(0) {};
+  Clock() : SYSCLK(0), TIMA(0), TMA(0), TAC(0), TIMA_OF_delay(false) {};
   ~Clock() = default;
 
   bool Update(uint8_t cycles);
@@ -21,7 +23,7 @@ public:
   uint8_t GetTMA() const { return TMA; }
   uint8_t GetTAC() const { return 0xF8 | TAC; }
 
-  void ResetSYSCLK() { SYSCLK = 0; }
+  void ResetSYSCLK();
   void SetTIMA(uint8_t data) { TIMA = data; }
   void SetTMA(uint8_t data) { TMA = data; }
   void SetTAC(uint8_t data) { TAC = data; }

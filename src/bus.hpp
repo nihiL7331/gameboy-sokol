@@ -11,12 +11,12 @@
 
 class Bus {
 private:
-  std::vector<uint8_t> ROM{};          // usually 32KB
-  std::array<uint8_t, 0x2000> VRAM{};  // 0x8000 - 0x9FFF
+  std::vector<uint8_t> ROM{}; // usually 32KB
+  // VRAM (0x8000 - 0x9FFF) lives in the PPU
   std::array<uint8_t, 0x2000> EXRAM{}; // 0xA000 - 0xBFFF
   std::array<uint8_t, 0x2000> WRAM{};  // 0xC000 - 0xDFFF
   // 0xE000-0xFDFF is mirror of 0xC000-0xDDzFF
-  std::array<uint8_t, 0x00A0> OAM{}; // 0xFE00 - 0xFE9F
+  // OAM (0xFE00 - 0xFE9F) lives in the PPU
   // 0xFEA0-FEFF is not usable
   std::array<uint8_t, 0x0080> IO{};   // 0xFF00 - 0xFF7F
   std::array<uint8_t, 0x007F> HRAM{}; // 0xFF80 - 0xFFFE
@@ -39,7 +39,21 @@ public:
 
   void LoadROM(std::vector<uint8_t> rom_data) { ROM = std::move(rom_data); }
 
-  uint8_t Read(uint16_t addr) const {
+  void Tick(uint8_t cycles) {
+    if (clock.Update(cycles))
+      IO[0x0F] |= 0x04;
+    uint8_t ppu_req = ppu.Update(cycles);
+    if (ppu_req > 0)
+      IO[0x0F] |= ppu_req;
+  }
+
+  uint8_t Read(uint16_t addr) {
+    Tick(4);
+    return Peek(addr);
+  }
+
+  uint8_t
+  Peek(uint16_t addr) { // for internal use, to check without adding cycles
     if (is_boot && addr < 0x0100)
       return BOOT[addr];
 
@@ -48,18 +62,19 @@ public:
     case 0x1:
     case 0x2:
     case 0x3: {
-      return ROM[addr];
+      return ROM.at(addr);
     }
     case 0x4:
     case 0x5:
     case 0x6:
     case 0x7: { // ROM
       uint16_t offset = addr - 0x4000;
-      return ROM[offset + rom_bank * 0x4000];
+      uint32_t target_addr = offset + (rom_bank * 0x4000);
+      return ROM[target_addr % ROM.size()];
     }
     case 0x8:
     case 0x9: { // VRAM
-      return VRAM[addr & 0x1FFF];
+      return ppu.ReadVRAM(addr);
     }
     case 0xA:
     case 0xB: { // EXRAM
@@ -74,7 +89,7 @@ public:
       if (addr >= 0xE000 && addr <= 0xFDFF) { // Mirror RAM
         return WRAM[addr & 0x1FFF];
       } else if (addr >= 0xFE00 && addr <= 0xFE9F) { // OAM
-        return OAM[addr & 0x00FF];
+        return ppu.ReadOAM(addr);
       } else if (addr >= 0xFEA0 && addr <= 0xFEFF) { // Dead zone
         return 0xFF;
       } else if (addr >= 0xFF00 && addr <= 0xFF7F) { // IO
@@ -100,6 +115,16 @@ public:
           return ppu.GetLY();
         else if (addr == 0xFF45)
           return ppu.GetLYC();
+        else if (addr == 0xFF47)
+          return ppu.GetBGP();
+        else if (addr == 0xFF48)
+          return ppu.GetOBP0();
+        else if (addr == 0xFF49)
+          return ppu.GetOBP1();
+        else if (addr == 0xFF4A)
+          return ppu.GetWY();
+        else if (addr == 0xFF4B)
+          return ppu.GetWX();
         return IO[addr & 0x00FF];
       } else if (addr >= 0xFF80 && addr <= 0xFFFE) { // HRAM
         return HRAM[addr & 0x007F];
@@ -111,17 +136,27 @@ public:
     return 0xFF;
   }
 
+  void SetIO(uint8_t addr, uint8_t data) { IO[addr & 0x7F] = data; }
+
   void Write(uint16_t addr, uint8_t data) {
+    Tick(4);
+
     // HACK: intercept serial port output for tests
-    if (addr == 0xFF02 && data == 0x81) {
-      std::cout << (char)Read(0xFF01);
-      std::cout.flush();
+    if (addr == 0xFF02) {
+      if (data == 0x81) {
+        std::cout << (char)Peek(0xFF01);
+        std::cout.flush();
+      }
+      IO[0x02] = data & 0x7F;
       return;
     }
 
     if (addr == 0xFF02) {
       IO[0x02] = 0;
       return;
+    }
+    if (addr == 0xFF50) {
+      std::cout << "BOOT ROM FINISHED! Switching to Game ROM..." << std::endl;
     }
 
     switch (addr >> 12) {
@@ -145,7 +180,7 @@ public:
     }
     case 0x8:
     case 0x9: { // VRAM
-      VRAM[addr & 0x1FFF] = data;
+      ppu.WriteVRAM(addr, data);
       break;
     }
     case 0xA:
@@ -163,7 +198,7 @@ public:
       if (addr >= 0xE000 && addr <= 0xFDFF) { // Mirror RAM
         WRAM[addr & 0x1FFF] = data;
       } else if (addr >= 0xFE00 && addr <= 0xFE9F) { // OAM
-        OAM[addr & 0x00FF] = data;
+        ppu.WriteOAM(addr, data);
       } else if (addr >= 0xFF00 && addr <= 0xFF7F) { // IO
         if (addr == 0xFF04) {                        // Divider Register (Timer)
           clock.ResetSYSCLK();
@@ -186,6 +221,21 @@ public:
           ppu.SetLY(data);
         else if (addr == 0xFF45)
           ppu.SetLYC(data);
+        else if (addr == 0xFF46) {
+          uint16_t dma_source = data << 8;
+          for (int i = 0; i < 160; ++i)
+            ppu.WriteOAM(0xFE00 + i, Peek(dma_source + i));
+          IO[addr & 0x00FF] = data;
+        } else if (addr == 0xFF47)
+          ppu.SetBGP(data);
+        else if (addr == 0xFF48)
+          ppu.SetOBP0(data);
+        else if (addr == 0xFF49)
+          ppu.SetOBP1(data);
+        else if (addr == 0xFF4A)
+          ppu.SetWY(data);
+        else if (addr == 0xFF4B)
+          ppu.SetWX(data);
         else if (addr == 0xFF50 && data != 0) // BOOT ROM Finish toggle
           is_boot = false;
         IO[addr & 0x00FF] = data;

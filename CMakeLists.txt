@@ -9,11 +9,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_executable(emugameboy
   src/main_emu.cpp
-  # src/disassembler.cpp
   src/cpu.cpp
   src/clock.cpp
   src/ppu.cpp
-  # src/sokol.cpp
+  src/sokol.cpp
 )
 
 add_custom_target(run

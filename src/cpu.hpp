@@ -28,7 +28,7 @@ private:
 
   Bus &bus;
 
-  uint8_t ExecuteCB();
+  void ExecuteCB();
 
 public:
   CPU(class Bus &b)
@@ -36,8 +36,8 @@ public:
         PC(0x0000), SP(0xFFFE), F(0x00), bus(b) {};
   ~CPU() = default;
 
-  uint8_t HandleInterrupts();
-  uint8_t Step();
+  void HandleInterrupts();
+  void Step();
 
   void SetFlag(const uint8_t mask, bool cond) {
     uint8_t bs = -static_cast<uint8_t>(cond);
@@ -53,6 +53,7 @@ public:
   uint16_t GetPC() const { return PC; }
 
   bool GetHALT() const { return HALT; }
+  void SetHALT(bool set) { HALT = set; }
 
   void SetAF(uint16_t val) {
     A = (val >> 8) & 0xFF;
