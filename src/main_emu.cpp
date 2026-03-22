@@ -1,9 +1,11 @@
 #include "bus.hpp"
+#include "clock.hpp"
 #include "cpu.hpp"
 #include <fstream>
 #include <iostream>
 
-static Bus bus;
+static Clock clk;
+static Bus bus(clk);
 static CPU cpu(bus);
 
 std::vector<uint8_t> ReadROMFile(const std::string &path) {
@@ -41,10 +43,19 @@ int main(int argc, char *argv[]) {
   //
   // InitializeSystem(argv[1]);
 
-  InitializeSystem("../roms/dmg_boot.bin",
-                   "../roms/cpu_instrs/11-op a,(hl).gb");
+  InitializeSystem("../roms/dmg_boot.bin", "../roms/cpu_instrs/cpu_instrs.gb");
 
   while (true) {
-    cpu.Step();
+    uint8_t cycles = cpu.HandleInterrupts();
+
+    if (cycles == 0) {
+      if (cpu.GetHALT())
+        cycles = 4;
+      else
+        cycles = cpu.Step();
+    }
+
+    if (clk.Update(cycles))
+      bus.Write(0xFF0F, bus.Read(0xFF0F) | 0x04);
   }
 }

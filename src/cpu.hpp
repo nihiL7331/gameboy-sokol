@@ -21,6 +21,10 @@ private:
   // - Half carry
   // - Carry
   // - Rest is always 0
+  bool IME;          // Interrupt Master Enable
+  bool enabling_IME; // Helper flag to handle EI
+  bool HALT;         // true if CPU is halted (0x76)
+  bool HALT_BUG;     // Flag for handling the HALT bug
 
   Bus &bus;
 
@@ -32,6 +36,7 @@ public:
         PC(0x0000), SP(0xFFFE), F(0x00), bus(b) {};
   ~CPU() = default;
 
+  uint8_t HandleInterrupts();
   uint8_t Step();
 
   void SetFlag(const uint8_t mask, bool cond) {
@@ -46,6 +51,8 @@ public:
   uint16_t GetHL() const { return (H << 8) | L; }
   uint16_t GetSP() const { return SP; }
   uint16_t GetPC() const { return PC; }
+
+  bool GetHALT() const { return HALT; }
 
   void SetAF(uint16_t val) {
     A = (val >> 8) & 0xFF;

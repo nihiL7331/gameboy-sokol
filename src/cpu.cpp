@@ -2,8 +2,56 @@
 #include <format>
 #include <iostream>
 
+uint8_t CPU::HandleInterrupts() {
+  uint8_t cycles = 0;
+
+  uint8_t IE = bus.Read(0xFFFF);
+  uint8_t IF = bus.Read(0xFF0F);
+  uint8_t pending = IE & IF & 0x1F;
+  if (pending)
+    HALT = false;
+  if (IME) {
+    if (pending) {
+      IME = false;
+      bus.Write(--SP, PC >> 8);
+      bus.Write(--SP, PC & 0x00FF);
+      if (pending & 0x01) { // VBlank
+        PC = 0x0040;
+        bus.Write(0xFF0F, IF & 0xFE);
+      } else if (pending & 0x02) { // LCD
+        PC = 0x0048;
+        bus.Write(0xFF0F, IF & 0xFD);
+      } else if (pending & 0x04) { // Timer
+        PC = 0x0050;
+        bus.Write(0xFF0F, IF & 0xFB);
+      } else if (pending & 0x08) { // Serial
+        PC = 0x0058;
+        bus.Write(0xFF0F, IF & 0xF7);
+      } else if (pending & 0x10) { // Joypad
+        PC = 0x0060;
+        bus.Write(0xFF0F, IF & 0xEF);
+      }
+
+      cycles = 20;
+    }
+  }
+
+  if (enabling_IME) {
+    IME = true;
+    enabling_IME = false;
+  }
+
+  return cycles;
+}
+
 uint8_t CPU::Step() {
-  uint8_t opcode = bus.Read(PC++);
+  uint8_t opcode = bus.Read(PC);
+
+  if (HALT_BUG)
+    HALT_BUG = false;
+  else
+    PC++;
+
   if (!bus.is_boot) {
     // std::cout << std::format("PC: 0x{:04X} | OP: 0x{:02X}\n", PC - 1,
     // opcode);
@@ -109,6 +157,10 @@ uint8_t CPU::Step() {
     SetFlag(FLAG_N, false);
     SetFlag(FLAG_HCY, false);
     SetFlag(FLAG_CY, CY);
+    return 4;
+  }
+  case 0x10: { // STOP n8
+    PC++;
     return 4;
   }
   case 0x11: { // LD DE, n16
@@ -635,6 +687,14 @@ uint8_t CPU::Step() {
   case 0x75: { // LD [HL], L
     bus.Write(GetHL(), L);
     return 8;
+  }
+  case 0x76: { // HALT
+    if (!IME &&
+        (bus.Read(0xFFFF) & bus.Read(0xFF0F) & 0x1F) > 0) // HALT bug behavior
+      HALT_BUG = true;
+    else
+      HALT = true;
+    return 4;
   }
   case 0x77: { // LD [HL], A
     bus.Write(GetHL(), A);
@@ -1427,7 +1487,7 @@ uint8_t CPU::Step() {
     return 8;
   }
   case 0xD9: { // RETI
-    // TODO: EI
+    IME = true;
     uint8_t lo = bus.Read(SP++);
     uint8_t hi = bus.Read(SP++);
     PC = (hi << 8) | lo;
@@ -1553,7 +1613,9 @@ uint8_t CPU::Step() {
     return 8;
   }
   case 0xF3: { // DI
-    return 4;  // TODO:
+    IME = false;
+    enabling_IME = false;
+    return 4;
   }
   case 0xF5: { // PUSH AF
     bus.Write(--SP, A);
@@ -1594,6 +1656,10 @@ uint8_t CPU::Step() {
     uint8_t hi = bus.Read(PC++);
     A = bus.Read((hi << 8) | lo);
     return 16;
+  }
+  case 0xFB: { // EI
+    enabling_IME = true;
+    return 4;
   }
   case 0xFE: { // CP A, n8
     uint8_t byte = bus.Read(PC++);
