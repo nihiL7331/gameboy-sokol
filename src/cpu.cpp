@@ -1555,7 +1555,7 @@ uint8_t CPU::Step() {
     SetFlag(FLAG_N, false);
     SetFlag(FLAG_HCY, true);
     SetFlag(FLAG_CY, false);
-    return 4;
+    return 8;
   }
   case 0xE7: { // RST $20
     bus.Write(--SP, PC >> 8);
@@ -2667,7 +2667,7 @@ uint8_t CPU::ExecuteCB() {
     uint8_t byte = bus.Read(HL);
     byte &= 0xFE;
     bus.Write(HL, byte);
-    return 12;
+    return 16;
   }
   case 0x87: { // RES 0, A
     A &= 0xFE;
@@ -2702,7 +2702,7 @@ uint8_t CPU::ExecuteCB() {
     uint8_t byte = bus.Read(HL);
     byte &= 0xFD;
     bus.Write(HL, byte);
-    return 12;
+    return 16;
   }
   case 0x8F: { // RES 1, A
     A &= 0xFD;
@@ -2737,7 +2737,7 @@ uint8_t CPU::ExecuteCB() {
     uint8_t byte = bus.Read(HL);
     byte &= 0xFB;
     bus.Write(HL, byte);
-    return 12;
+    return 16;
   }
   case 0x97: { // RES 2, A
     A &= 0xFB;
@@ -2772,7 +2772,7 @@ uint8_t CPU::ExecuteCB() {
     uint8_t byte = bus.Read(HL);
     byte &= 0xF7;
     bus.Write(HL, byte);
-    return 12;
+    return 16;
   }
   case 0x9F: { // RES 3, A
     A &= 0xF7;
@@ -2807,7 +2807,7 @@ uint8_t CPU::ExecuteCB() {
     uint8_t byte = bus.Read(HL);
     byte &= 0xEF;
     bus.Write(HL, byte);
-    return 12;
+    return 16;
   }
   case 0xA7: { // RES 4, A
     A &= 0xEF;
@@ -2842,7 +2842,7 @@ uint8_t CPU::ExecuteCB() {
     uint8_t byte = bus.Read(HL);
     byte &= 0xDF;
     bus.Write(HL, byte);
-    return 12;
+    return 16;
   }
   case 0xAF: { // RES 5, A
     A &= 0xDF;
@@ -2877,7 +2877,7 @@ uint8_t CPU::ExecuteCB() {
     uint8_t byte = bus.Read(HL);
     byte &= 0xBF;
     bus.Write(HL, byte);
-    return 12;
+    return 16;
   }
   case 0xB7: { // RES 6, A
     A &= 0xBF;
@@ -2912,7 +2912,7 @@ uint8_t CPU::ExecuteCB() {
     uint8_t byte = bus.Read(HL);
     byte &= 0x7F;
     bus.Write(HL, byte);
-    return 12;
+    return 16;
   }
   case 0xBF: { // RES 7, A
     A &= 0x7F;
@@ -2947,7 +2947,7 @@ uint8_t CPU::ExecuteCB() {
     uint8_t byte = bus.Read(HL);
     byte |= 0x01;
     bus.Write(HL, byte);
-    return 12;
+    return 16;
   }
   case 0xC7: { // SET 0, A
     A |= 0x01;
@@ -2982,7 +2982,7 @@ uint8_t CPU::ExecuteCB() {
     uint8_t byte = bus.Read(HL);
     byte |= 0x02;
     bus.Write(HL, byte);
-    return 12;
+    return 16;
   }
   case 0xCF: { // SET 1, A
     A |= 0x02;
@@ -3017,7 +3017,7 @@ uint8_t CPU::ExecuteCB() {
     uint8_t byte = bus.Read(HL);
     byte |= 0x04;
     bus.Write(HL, byte);
-    return 12;
+    return 16;
   }
   case 0xD7: { // SET 2, A
     A |= 0x04;
@@ -3052,7 +3052,7 @@ uint8_t CPU::ExecuteCB() {
     uint8_t byte = bus.Read(HL);
     byte |= 0x08;
     bus.Write(HL, byte);
-    return 12;
+    return 16;
   }
   case 0xDF: { // SET 3, A
     A |= 0x08;
@@ -3087,7 +3087,7 @@ uint8_t CPU::ExecuteCB() {
     uint8_t byte = bus.Read(HL);
     byte |= 0x10;
     bus.Write(HL, byte);
-    return 12;
+    return 16;
   }
   case 0xE7: { // SET 4, A
     A |= 0x10;
@@ -3122,7 +3122,7 @@ uint8_t CPU::ExecuteCB() {
     uint8_t byte = bus.Read(HL);
     byte |= 0x20;
     bus.Write(HL, byte);
-    return 12;
+    return 16;
   }
   case 0xEF: { // SET 5, A
     A |= 0x20;
@@ -3157,7 +3157,7 @@ uint8_t CPU::ExecuteCB() {
     uint8_t byte = bus.Read(HL);
     byte |= 0x40;
     bus.Write(HL, byte);
-    return 12;
+    return 16;
   }
   case 0xF7: { // SET 6, A
     A |= 0x40;
@@ -3192,7 +3192,7 @@ uint8_t CPU::ExecuteCB() {
     uint8_t byte = bus.Read(HL);
     byte |= 0x80;
     bus.Write(HL, byte);
-    return 12;
+    return 16;
   }
   case 0xFF: { // SET 7, A
     A |= 0x80;

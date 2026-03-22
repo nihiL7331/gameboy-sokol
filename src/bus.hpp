@@ -2,6 +2,7 @@
 #define BUS_HPP
 
 #include "clock.hpp"
+#include "ppu.hpp"
 #include <array>
 #include <cstdint>
 #include <cstring>
@@ -24,11 +25,12 @@ private:
   std::array<uint8_t, 0x100> BOOT{}; // technically not separate
 
   Clock &clock;
+  PPU &ppu;
 
   uint8_t rom_bank = 1;
 
 public:
-  Bus(class Clock &clock) : IE(0), clock(clock) {};
+  Bus(class Clock &clock, class PPU &ppu) : IE(0), clock(clock), ppu(ppu) {};
 
   bool is_boot = true;
   void LoadBoot(const std::vector<uint8_t> &boot_data) {
@@ -38,14 +40,9 @@ public:
   void LoadROM(std::vector<uint8_t> rom_data) { ROM = std::move(rom_data); }
 
   uint8_t Read(uint16_t addr) const {
-    // HACK:
-    if (addr == 0xFF44) {
-      static uint8_t fake_ly = 0;
-      fake_ly = (fake_ly + 1) % 154;
-      return fake_ly;
-    }
     if (is_boot && addr < 0x0100)
       return BOOT[addr];
+
     switch (addr >> 12) {
     case 0x0:
     case 0x1:
@@ -91,6 +88,18 @@ public:
           return clock.GetTMA();
         else if (addr == 0xFF07)
           return clock.GetTAC();
+        else if (addr == 0xFF40)
+          return ppu.GetLCDC();
+        else if (addr == 0xFF41)
+          return ppu.GetSTAT();
+        else if (addr == 0xFF42)
+          return ppu.GetSCY();
+        else if (addr == 0xFF43)
+          return ppu.GetSCX();
+        else if (addr == 0xFF44)
+          return ppu.GetLY();
+        else if (addr == 0xFF45)
+          return ppu.GetLYC();
         return IO[addr & 0x00FF];
       } else if (addr >= 0xFF80 && addr <= 0xFFFE) { // HRAM
         return HRAM[addr & 0x007F];
@@ -165,6 +174,18 @@ public:
           clock.SetTMA(data);
         else if (addr == 0xFF07)
           clock.SetTAC(data);
+        else if (addr == 0xFF40)
+          ppu.SetLCDC(data);
+        else if (addr == 0xFF41)
+          ppu.SetSTAT(data);
+        else if (addr == 0xFF42)
+          ppu.SetSCY(data);
+        else if (addr == 0xFF43)
+          ppu.SetSCX(data);
+        else if (addr == 0xFF44)
+          ppu.SetLY(data);
+        else if (addr == 0xFF45)
+          ppu.SetLYC(data);
         else if (addr == 0xFF50 && data != 0) // BOOT ROM Finish toggle
           is_boot = false;
         IO[addr & 0x00FF] = data;

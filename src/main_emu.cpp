@@ -1,11 +1,13 @@
 #include "bus.hpp"
 #include "clock.hpp"
 #include "cpu.hpp"
+#include "ppu.hpp"
 #include <fstream>
 #include <iostream>
 
 static Clock clk;
-static Bus bus(clk);
+static PPU ppu;
+static Bus bus(clk, ppu);
 static CPU cpu(bus);
 
 std::vector<uint8_t> ReadROMFile(const std::string &path) {
@@ -43,7 +45,8 @@ int main(int argc, char *argv[]) {
   //
   // InitializeSystem(argv[1]);
 
-  InitializeSystem("../roms/dmg_boot.bin", "../roms/cpu_instrs/cpu_instrs.gb");
+  InitializeSystem("../roms/dmg_boot.bin",
+                   "../roms/instr_timing/instr_timing.gb");
 
   while (true) {
     uint8_t cycles = cpu.HandleInterrupts();
@@ -57,5 +60,8 @@ int main(int argc, char *argv[]) {
 
     if (clk.Update(cycles))
       bus.Write(0xFF0F, bus.Read(0xFF0F) | 0x04);
+
+    uint8_t ppu_inter = ppu.Update(cycles);
+    bus.Write(0xFF0F, bus.Read(0xFF0F) | ppu_inter);
   }
 }

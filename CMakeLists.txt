@@ -12,6 +12,7 @@ add_executable(emugameboy
   # src/disassembler.cpp
   src/cpu.cpp
   src/clock.cpp
+  src/ppu.cpp
   # src/sokol.cpp
 )
 
